@@ -1,70 +1,104 @@
-// src/App.js
-
 import React, { useState, useEffect } from 'react';
-import './App.css';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import auth from '@react-native-firebase/auth';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+
 import SignUp from './components/SignUp';
 import Login from './components/Login';
 import PasswordReset from './components/PasswordReset';
 import NewEntry from './components/NewEntry';
 import EntryList from './components/EntryList';
-import { auth } from './firebase';
+
+const Stack = createStackNavigator();
 
 function App() {
   const [user, setUser] = useState(null);
-  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', or 'reset'
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth().onAuthStateChanged((user) => {
       setUser(user);
     });
-    return () => unsubscribe();
+    return unsubscribe;
   }, []);
 
   const handleLogout = () => {
-    auth.signOut();
-  };
-
-  const renderAuthComponent = () => {
-    switch(authMode) {
-      case 'signup':
-        return <SignUp />;
-      case 'reset':
-        return <PasswordReset />;
-      default:
-        return <Login />;
-    }
+    auth().signOut();
   };
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <h1>My Diary App</h1>
-        {user && (
-          <div className="user-info">
-            <span>Logged in as: {user.email}</span>
-            <button onClick={handleLogout}>Logout</button>
-          </div>
-        )}
-      </header>
-      <main>
+    <NavigationContainer>
+      <Stack.Navigator>
         {user ? (
           <>
-            <NewEntry />
-            <EntryList />
+            <Stack.Screen 
+              name="Home" 
+              component={HomeScreen} 
+              options={{
+                headerRight: () => (
+                  <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                    <Text style={styles.logoutText}>Logout</Text>
+                  </TouchableOpacity>
+                ),
+              }}
+            />
+            <Stack.Screen name="NewEntry" component={NewEntry} />
           </>
         ) : (
           <>
-            {renderAuthComponent()}
-            <div className="auth-options">
-              <button onClick={() => setAuthMode('login')}>Login</button>
-              <button onClick={() => setAuthMode('signup')}>Sign Up</button>
-              <button onClick={() => setAuthMode('reset')}>Forgot Password</button>
-            </div>
+            <Stack.Screen name="Login" component={Login} />
+            <Stack.Screen name="SignUp" component={SignUp} />
+            <Stack.Screen name="PasswordReset" component={PasswordReset} />
           </>
         )}
-      </main>
-    </div>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
+
+function HomeScreen({ navigation }) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>My Diary App</Text>
+      <TouchableOpacity 
+        style={styles.button} 
+        onPress={() => navigation.navigate('NewEntry')}
+      >
+        <Text style={styles.buttonText}>New Entry</Text>
+      </TouchableOpacity>
+      <EntryList />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  button: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 5,
+    marginBottom: 20,
+  },
+  buttonText: {
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 16,
+  },
+  logoutButton: {
+    marginRight: 10,
+  },
+  logoutText: {
+    color: '#007bff',
+    fontSize: 16,
+  },
+});
 
 export default App;
