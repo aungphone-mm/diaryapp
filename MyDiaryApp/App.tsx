@@ -1,117 +1,140 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React from 'react';
-import type {PropsWithChildren} from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
   View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
 } from 'react-native';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { auth } from './src/config/firebase';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+import Login from './src/components/Login';
+import SignUp from './src/components/SignUp';
+import PasswordReset from './src/components/PasswordReset';
+import NewEntry from './src/components/NewEntry';
+import EntryList from './src/components/EntryList';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+type RootStackParamList = {
+  Login: undefined;
+  SignUp: undefined;
+  PasswordReset: undefined;
+  Home: undefined;
+  NewEntry: undefined;
+};
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+type HomeScreenProps = NativeStackScreenProps<RootStackParamList, 'Home'>;
+
+const Stack = createStackNavigator<RootStackParamList>();
+
+function HomeScreen({ navigation }: HomeScreenProps): React.JSX.Element {
   return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
+    <View style={styles.container}>
+      <TouchableOpacity
+        style={styles.newEntryButton}
+        onPress={() => navigation.navigate('NewEntry')}
+      >
+        <Text style={styles.buttonText}>+ New Entry</Text>
+      </TouchableOpacity>
+      <EntryList />
     </View>
   );
 }
 
 function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+  const [user, setUser] = useState<any>(null);
+  const [authMode, setAuthMode] = useState<'login' | 'signup' | 'reset'>('login');
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  useEffect(() => {
+    const unsubscribe = auth().onAuthStateChanged((user) => {
+      setUser(user);
+    });
+    return unsubscribe;
+  }, []);
+
+  const handleLogout = () => {
+    auth().signOut();
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" />
+      <NavigationContainer>
+        <Stack.Navigator>
+          {user ? (
+            <>
+              <Stack.Screen
+                name="Home"
+                component={HomeScreen}
+                options={{
+                  title: 'My Diary',
+                  headerRight: () => (
+                    <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
+                      <Text style={styles.logoutText}>Logout</Text>
+                    </TouchableOpacity>
+                  ),
+                }}
+              />
+              <Stack.Screen
+                name="NewEntry"
+                component={NewEntry}
+                options={{ title: 'New Entry' }}
+              />
+            </>
+          ) : (
+            <>
+              <Stack.Screen name="Login" options={{ headerShown: false }}>
+                {() => (
+                  <Login
+                    onSignUpPress={() => setAuthMode('signup')}
+                    onPasswordResetPress={() => setAuthMode('reset')}
+                  />
+                )}
+              </Stack.Screen>
+              <Stack.Screen name="SignUp" options={{ headerShown: false }}>
+                {() => <SignUp onBackToLogin={() => setAuthMode('login')} />}
+              </Stack.Screen>
+              <Stack.Screen name="PasswordReset" options={{ headerShown: false }}>
+                {() => <PasswordReset onBackToLogin={() => setAuthMode('login')} />}
+              </Stack.Screen>
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  newEntryButton: {
+    backgroundColor: '#007bff',
+    padding: 15,
+    margin: 20,
+    borderRadius: 8,
+    alignItems: 'center',
   },
-  highlight: {
-    fontWeight: '700',
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  logoutButton: {
+    marginRight: 15,
+  },
+  logoutText: {
+    color: '#007bff',
+    fontSize: 16,
   },
 });
 

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import auth from '@react-native-firebase/auth';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase';
+import './App.css';
 
 import SignUp from './components/SignUp';
 import Login from './components/Login';
@@ -10,95 +9,57 @@ import PasswordReset from './components/PasswordReset';
 import NewEntry from './components/NewEntry';
 import EntryList from './components/EntryList';
 
-const Stack = createStackNavigator();
-
 function App() {
   const [user, setUser] = useState(null);
+  const [authMode, setAuthMode] = useState('login'); // 'login', 'signup', 'reset'
 
   useEffect(() => {
-    const unsubscribe = auth().onAuthStateChanged((user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
     });
     return unsubscribe;
   }, []);
 
   const handleLogout = () => {
-    auth().signOut();
+    auth.signOut();
   };
 
-  return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        {user ? (
-          <>
-            <Stack.Screen 
-              name="Home" 
-              component={HomeScreen} 
-              options={{
-                headerRight: () => (
-                  <TouchableOpacity onPress={handleLogout} style={styles.logoutButton}>
-                    <Text style={styles.logoutText}>Logout</Text>
-                  </TouchableOpacity>
-                ),
-              }}
-            />
-            <Stack.Screen name="NewEntry" component={NewEntry} />
-          </>
-        ) : (
-          <>
-            <Stack.Screen name="Login" component={Login} />
-            <Stack.Screen name="SignUp" component={SignUp} />
-            <Stack.Screen name="PasswordReset" component={PasswordReset} />
-          </>
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
-  );
-}
+  if (!user) {
+    return (
+      <div className="App">
+        <h1>My Diary App</h1>
+        {authMode === 'login' && <Login />}
+        {authMode === 'signup' && <SignUp />}
+        {authMode === 'reset' && <PasswordReset />}
 
-function HomeScreen({ navigation }) {
+        <div className="auth-options">
+          {authMode !== 'login' && (
+            <button onClick={() => setAuthMode('login')}>Back to Login</button>
+          )}
+          {authMode !== 'signup' && (
+            <button onClick={() => setAuthMode('signup')}>Sign Up</button>
+          )}
+          {authMode !== 'reset' && (
+            <button onClick={() => setAuthMode('reset')}>Forgot Password?</button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>My Diary App</Text>
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={() => navigation.navigate('NewEntry')}
-      >
-        <Text style={styles.buttonText}>New Entry</Text>
-      </TouchableOpacity>
+    <div className="App">
+      <div className="App-header">
+        <h1>My Diary App</h1>
+        <div className="user-info">
+          <span>{user.email}</span>
+          <button onClick={handleLogout}>Logout</button>
+        </div>
+      </div>
+      <NewEntry />
       <EntryList />
-    </View>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-  },
-  button: {
-    backgroundColor: '#007bff',
-    padding: 10,
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  buttonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontSize: 16,
-  },
-  logoutButton: {
-    marginRight: 10,
-  },
-  logoutText: {
-    color: '#007bff',
-    fontSize: 16,
-  },
-});
 
 export default App;
