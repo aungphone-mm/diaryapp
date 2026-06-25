@@ -48,5 +48,8 @@
   },
   "devDependencies": {
     "gh-pages": "^6.1.1"
+  },
+  "overrides": {
+    "ws": "^8.21.0"
   }
 }
